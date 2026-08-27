@@ -35,6 +35,17 @@ from .data_service import REP_IDS
 
 MODEL_NAME = "gpt-4o-mini"
 
+# These tools feed LLM context; exclude tax_id, date_of_birth, card_on_file, and credit_check_ref.
+SENSITIVE_PROSPECT_FIELDS = ("billing_qualification",)
+# These tools feed LLM context; exclude tax_id, date_of_birth, card_on_file, and credit_check_ref.
+PROSPECT_CONTACT_FIELDS = (
+    "name",
+    "email",
+    "annual_revenue",
+    "enrichment_source",
+    "disqualified",
+)
+
 # ---------------------------------------------------------------------------
 # Tools
 # ---------------------------------------------------------------------------
@@ -58,7 +69,7 @@ def build_prospect_profile(prospect_id: str) -> dict:
         return {"prospect_profile": None, "found": False}
     built = {
         "prospect_id": prospect_id,
-        **rec,
+        **{k: v for k, v in rec.items() if k not in SENSITIVE_PROSPECT_FIELDS},
         "engagement_history": data_service.fetch_engagement_history(prospect_id),
         "account_details": data_service.fetch_account_details(prospect_id),
         "tech_stack": data_service.fetch_tech_stack(prospect_id),
@@ -132,8 +143,7 @@ def get_prospect(prospect_id: str) -> dict:
     # caller can pull from build_prospect_profile instead.
     contact = {
         "prospect_id": prospect_id,
-        **{k: v for k, v in record.items()
-           if k not in ("engagement_history", "account_details", "tech_stack")},
+        **{k: record[k] for k in PROSPECT_CONTACT_FIELDS if k in record},
     }
     return {"prospect": contact, "found": True}
 
